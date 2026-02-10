@@ -5,8 +5,17 @@ import (
 	"time"
 )
 
+type ValueType int
+
+const (
+	StringType ValueType = iota
+	ListType
+)
+
 type Entry struct {
+	Type   ValueType
 	Value    string
+	List    []string
 	ExpireAt time.Time
 }
 
@@ -48,4 +57,59 @@ func (s *Store) Get(key string) (string, bool) {
 	}
 
 	return entry.Value, true
+}
+
+
+func (s *Store) RPush(key string, elements []string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	entry, exists := s.data[key]
+
+	// Stage requirement: only handle non-existing key
+	if !exists {
+		s.data[key] = Entry{
+			Type: ListType,
+			List: append([]string{},elements...),
+		}
+		return len(elements)
+	}
+
+	
+	if entry.Type == ListType {
+		entry.List = append(entry.List, elements...)
+		s.data[key] = entry
+		return len(entry.List)
+	}
+
+	return 0
+}
+
+func (s * Store) LRange (key string, start, stop int) []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+
+	entry,exists := s.data[key]
+
+	if !exists || entry.Type != ListType {
+		return []string{}
+	}
+
+	list := entry.List
+	n := len(list)
+
+	if start>=n {
+		return []string{}
+	}
+
+	if stop >= n { 
+		stop = n-1
+	}
+
+	if start > stop {
+		return []string{}
+	}
+
+	return list[start:stop+1]
 }

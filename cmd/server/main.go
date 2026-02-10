@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	ln, err := net.Listen("tcp", ":6380")
+	ln, err := net.Listen("tcp", ":6381")
 
 	if err != nil {
 		log.Fatal(err)
@@ -73,6 +73,13 @@ func handleConnection(conn net.Conn, st *store.Store) {
 		case "GET":
 			resp := commands.HandleGET(st, parts)
 			conn.Write(resp)
+		case "RPUSH":
+			resp := commands.HandleRPUSH(st, parts)
+			conn.Write(resp)
+		case "LRANGE": 
+			resp := commands.HandleLRANGE(st,parts)
+			conn.Write(resp)
+
 
 		default:
 			conn.Write([]byte("unknown command"))
