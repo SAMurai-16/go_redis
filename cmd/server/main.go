@@ -76,16 +76,24 @@ func handleConnection(conn net.Conn, st *store.Store) {
 		case "RPUSH":
 			resp := commands.HandleRPUSH(st, parts)
 			conn.Write(resp)
-		case "LRANGE": 
-			resp := commands.HandleLRANGE(st,parts)
+		case "LRANGE":
+			resp := commands.HandleLRANGE(st, parts)
 			conn.Write(resp)
 		case "LPUSH":
 			resp := commands.HandleLPUSH(st, parts)
 			conn.Write(resp)
 		case "LLEN":
-			resp := commands.HandleLLEN(st,parts)
+			resp := commands.HandleLLEN(st, parts)
 			conn.Write(resp)
-
+		case "LPOP":
+			resp := commands.HandleLPOP(st, parts)
+			conn.Write(resp)
+		case "TYPE":
+			resp := commands.HandleTYPE(st, parts)
+			conn.Write(resp)
+		case "XADD":
+			resp := commands.HandleXADD(st, parts)
+			conn.Write(resp)
 
 		default:
 			conn.Write([]byte("unknown command"))

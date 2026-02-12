@@ -10,12 +10,19 @@ type ValueType int
 const (
 	StringType ValueType = iota
 	ListType
+	StreamType
 )
 
+type StreamEntry struct {
+	ID     string
+	Fields map[string]string
+}
+
 type Entry struct {
-	Type   ValueType
+	Type     ValueType
 	Value    string
-	List    []string
+	List     []string
+	Stream   []StreamEntry
 	ExpireAt time.Time
 }
 
@@ -59,7 +66,6 @@ func (s *Store) Get(key string) (string, bool) {
 	return entry.Value, true
 }
 
-
 func (s *Store) RPush(key string, elements []string) int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -70,12 +76,11 @@ func (s *Store) RPush(key string, elements []string) int {
 	if !exists {
 		s.data[key] = Entry{
 			Type: ListType,
-			List: append([]string{},elements...),
+			List: append([]string{}, elements...),
 		}
 		return len(elements)
 	}
 
-	
 	if entry.Type == ListType {
 		entry.List = append(entry.List, elements...)
 		s.data[key] = entry
@@ -85,12 +90,11 @@ func (s *Store) RPush(key string, elements []string) int {
 	return 0
 }
 
-func (s * Store) LRange (key string, start, stop int) []string {
+func (s *Store) LRange(key string, start, stop int) []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-
-	entry,exists := s.data[key]
+	entry, exists := s.data[key]
 
 	if !exists || entry.Type != ListType {
 		return []string{}
@@ -99,45 +103,43 @@ func (s * Store) LRange (key string, start, stop int) []string {
 	list := entry.List
 	n := len(list)
 
-	if start>=n {
+	if start >= n {
 		return []string{}
 	}
 
-	if stop >= n { 
-		stop = n-1
+	if stop >= n {
+		stop = n - 1
 	}
 
 	if start > stop {
 		return []string{}
 	}
 
-	return list[start:stop+1]
+	return list[start : stop+1]
 }
 
-
-func (s *Store) LPush (key string, elements []string) int {
+func (s *Store) LPush(key string, elements []string) int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	reversed:= make([]string,0,len(elements))
-	for i := len(elements) -1; i>=0;i--{
+	reversed := make([]string, 0, len(elements))
+	for i := len(elements) - 1; i >= 0; i-- {
 		reversed = append(reversed, elements[i])
 
 	}
 
 	entry, exists := s.data[key]
 
-	 if !exists {
+	if !exists {
 		s.data[key] = Entry{
-			Type : ListType,
-			List : reversed,
-			
+			Type: ListType,
+			List: reversed,
 		}
 		return len(reversed)
-	 }
+	}
 
-	if entry.Type == ListType{
-		entry.List = append(reversed,entry.List...)
+	if entry.Type == ListType {
+		entry.List = append(reversed, entry.List...)
 		s.data[key] = entry
 		return len(entry.List)
 	}
@@ -145,8 +147,7 @@ func (s *Store) LPush (key string, elements []string) int {
 	return 0
 }
 
-
-func (s * Store) LLen (key string) int {
+func (s *Store) LLen(key string) int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -159,3 +160,59 @@ func (s * Store) LLen (key string) int {
 	return len(entry.List)
 
 }
+
+func (s *Store) LPop(key string, count int) []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	entry, exists := s.data[key]
+	if !exists || entry.Type != ListType || len(entry.List) == 0 {
+		return []string{}
+	}
+
+	if count <= 0 {
+		return []string{}
+	}
+
+	if count > len(entry.List) {
+		count = len(entry.List)
+	}
+
+	removed := entry.List[:count]
+	entry.List = entry.List[count:]
+
+	if len(entry.List) == 0 {
+		delete(s.data, key)
+
+	} else {
+		s.data[key] = entry
+	}
+
+	result := make([]string, len(removed))
+	copy(result, removed)
+	return result
+}
+
+func (s *Store) TypeOf(key string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	entry, exists := s.data[key]
+	if !exists {
+		return "none"
+	}
+
+	switch entry.Type {
+	case StringType:
+		return "string"
+	case ListType:
+		return "list"
+	case StreamType:
+	return "stream"
+	default:
+		return "none"
+	}
+}
+
+
+
