@@ -36,8 +36,8 @@ func normalizeRangeID(id string, isStart bool) (int64, int64, error) {
 }
 
 func (s *Store) XRange(key, startID, endID string) ([]StreamEntry, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 
 	entry, exists := s.data[key]
 	if !exists || entry.Type != StreamType {

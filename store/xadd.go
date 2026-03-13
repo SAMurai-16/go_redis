@@ -24,8 +24,8 @@ func parseStreamID(id string) (int64, int64, error) {
 }
 
 func (s *Store) XAdd(key, id string, fields map[string]string) (string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
 
 	entry, exists := s.data[key]
 
@@ -96,7 +96,7 @@ func (s *Store) XAdd(key, id string, fields map[string]string) (string, error) {
 		}
 
 		if ms == 0 && seq == 0 {
-			return "", fmt.Errorf("ERR The ID specified in XADD must be greater than 0-0")
+			return "", fmt.Errorf("ERR The ID specified in XADD Must be greater than 0-0")
 		}
 	}
 

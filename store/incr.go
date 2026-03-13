@@ -6,8 +6,8 @@ import (
 )
 
 func (s *Store) Incr(key string) (int64, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
 
 	entry, exists := s.data[key]
 

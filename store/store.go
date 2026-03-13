@@ -1,6 +1,7 @@
 package store
 
 import (
+	"net"
 	"sync"
 	"time"
 )
@@ -27,38 +28,37 @@ type Entry struct {
 }
 
 type Store struct {
-	mu   sync.RWMutex
+	Mu   sync.RWMutex
 	data map[string]Entry
 
-	
-	Role string   // "master" or "slave"
+	Role string // "master" or "slave"
 
 	MasterHost string
 	MasterPort string
-
 
 	ReplID     string
 	ReplOffset int64
 
 	ReplicaPort string
+	Replicas    []net.Conn
 }
 
 func New(role, host, masterPort, replicaPort string) *Store {
 	return &Store{
-		data: make(map[string]Entry),
-		Role: role,
-		MasterHost: host,
-		MasterPort: masterPort,
+		data:        make(map[string]Entry),
+		Role:        role,
+		MasterHost:  host,
+		MasterPort:  masterPort,
 		ReplicaPort: replicaPort,
-		ReplID:       "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb",
-		ReplOffset:   0,
-
+		ReplID:      "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb",
+		ReplOffset:  0,
+		Replicas: make([]net.Conn, 0),
 	}
 }
 
 func (s *Store) Set(key, value string, expireAt time.Time) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
 
 	s.data[key] = Entry{
 		Value:    value,
@@ -68,8 +68,8 @@ func (s *Store) Set(key, value string, expireAt time.Time) {
 }
 
 func (s *Store) Get(key string) (string, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 
 	entry, ok := s.data[key]
 	if !ok {
@@ -86,8 +86,8 @@ func (s *Store) Get(key string) (string, bool) {
 }
 
 func (s *Store) RPush(key string, elements []string) int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
 
 	entry, exists := s.data[key]
 
@@ -110,8 +110,8 @@ func (s *Store) RPush(key string, elements []string) int {
 }
 
 func (s *Store) LRange(key string, start, stop int) []string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
 
 	entry, exists := s.data[key]
 
@@ -138,8 +138,8 @@ func (s *Store) LRange(key string, start, stop int) []string {
 }
 
 func (s *Store) LPush(key string, elements []string) int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
 
 	reversed := make([]string, 0, len(elements))
 	for i := len(elements) - 1; i >= 0; i-- {
@@ -167,8 +167,8 @@ func (s *Store) LPush(key string, elements []string) int {
 }
 
 func (s *Store) LLen(key string) int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 
 	entry, exists := s.data[key]
 
@@ -181,8 +181,8 @@ func (s *Store) LLen(key string) int {
 }
 
 func (s *Store) LPop(key string, count int) []string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
 
 	entry, exists := s.data[key]
 	if !exists || entry.Type != ListType || len(entry.List) == 0 {
@@ -213,8 +213,8 @@ func (s *Store) LPop(key string, count int) []string {
 }
 
 func (s *Store) TypeOf(key string) string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 
 	entry, exists := s.data[key]
 	if !exists {
@@ -227,11 +227,8 @@ func (s *Store) TypeOf(key string) string {
 	case ListType:
 		return "list"
 	case StreamType:
-	return "stream"
+		return "stream"
 	default:
 		return "none"
 	}
 }
-
-
-

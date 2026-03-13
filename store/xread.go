@@ -2,8 +2,8 @@ package store
 
 
 func (s *Store) XRead(key, id string) ([]StreamEntry, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.Mu.RLock()
+	defer s.Mu.RUnlock()
 
 	entry, exists := s.data[key]
 	if !exists || entry.Type != StreamType {
